@@ -13,6 +13,16 @@ service --status-all
 cat /etc/os-release
 ```
 
+## Check number of CPU core
+```
+nproc
+```
+
+## Check RAM available
+```
+free
+```
+
 ## Shutdown
 ```
 sudo shutdown --halt
