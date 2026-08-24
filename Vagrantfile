@@ -22,9 +22,9 @@ Vagrant.configure("2") do |config|
             echo 'export KUBECONFIG=/home/vagrant/.kube/config' >> /home/vagrant/.bashrc
 
             # copy node token
-            if [ ! -f /home/vagrant/node-token/token ]; do
-                cat /var/lib/rancher/k3s/server/node-token >> /home/vagrant/node-token/token
-            done
+            if [ ! -f /home/vagrant/node-token/token ]; then
+                cat /var/lib/rancher/k3s/server/node-token >> /home/vagrant/node-token/token;
+            fi
         SHELL
     end
 
