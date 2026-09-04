@@ -13,7 +13,8 @@ Vagrant.configure("2") do |config|
 
         pnamnilS.vm.provision "shell", inline: <<-SHELL
             # ติดตั้ง K3s Server โดยผูกเข้ากับ eth1 และ IP 192.168.56.110
-            curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --node-ip=192.168.56.110 --flannel-iface=eth1" sh -s -
+            curl -sfL https://get.k3s.io | \
+                INSTALL_K3S_EXEC="server --node-ip=192.168.56.110 --flannel-iface=eth1" sh -s -
 
             # ตั้งค่าให้ user vagrant รัน kubectl ได้โดยตรง
             mkdir -p /home/vagrant/.kube
@@ -41,7 +42,9 @@ Vagrant.configure("2") do |config|
                 echo "Waiting for K3s token from server..."
                 sleep 5
             done
-            curl -sfL https://get.k3s.io | K3S_URL=https://192.168.56.110:6443 K3S_TOKEN=$(cat /home/vagrant/node-token/token) sh -
+            curl -sfL https://get.k3s.io | K3S_URL=https://192.168.56.110:6443 \
+                K3S_TOKEN=$(cat /home/vagrant/node-token/token) \
+                INSTALL_K3S_EXEC="agent --node-ip=192.168.56.111 --flannel-iface=eth1" sh -s -
             rm /home/vagrant/node-token/token
         SHELL
     end
