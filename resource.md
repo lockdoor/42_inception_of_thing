@@ -20,3 +20,5 @@ curl -Lo /usr/local/bin/k3s https://github.com/k3s-io/k3s/releases/download/v1.2
 When provision in vagrant it use root privilege K3S will download to /usr/local/bin. User vagrant can access this path.
 
 [https://www.youtube.com/watch?v=tzj59F02TFU](Stop Avoiding Kubernetes - Set Up a K3S Cluster at Home)
+
+[https://de.co.th/kubernetes-yaml-beginner-guide] YAML FOR Kubernetes
