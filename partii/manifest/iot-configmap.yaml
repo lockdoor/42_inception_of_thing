@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: iot-configmap
+data:
+  app1: "Hello from app1"
+  app2: "Hello from app2"
+  app3: "Hello from app3"
+
+# can access by 'cm' or 'configmap' 
+# kubectl get cm iot-configmap
+# kubectl describe cm iot-configmap

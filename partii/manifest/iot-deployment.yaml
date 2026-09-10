@@ -1,0 +1,151 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iot-app1-deployment
+  labels:
+    app: iot-app1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: iot-app1
+  template: #This is field of pod
+    metadata:
+      labels:
+        app: iot-app1
+    spec:
+      volumes:
+        - name: shared-data
+          emptyDir: {}
+        - name: config-volume
+          configMap:
+            name: iot-configmap
+      containers:
+        - name: nginx
+          image: "nginx:stable-alpine3.24-perl"
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: shared-data
+              mountPath: /usr/share/nginx/html
+      initContainers:
+        - name: alpine
+          image: "alpine:3.23.5"
+          restartPolicy: Always
+          volumeMounts:
+            - name: shared-data
+              mountPath: /pod-data
+            - name: config-volume
+              mountPath: /etc/config
+          command:
+            - /bin/sh 
+            - -c
+            - |
+              while true; do
+                echo $(cat /etc/config/app1) > /pod-data/index.html;
+                sleep 10;
+              done;
+            # use echo for \n
+            # - "while true; do cat /etc/config/app1 > /pod-data/index.html; sleep 10; done;"
+
+# can access by 'deploy' or 'deployment' 
+# kubectl get deploy iot-app1-deployment
+# kubectl describe deploy iot-app1-deployment
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iot-app2-deployment
+  labels:
+    app: iot-app2
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: iot-app2
+  template: #This is field of pod
+    metadata:
+      labels:
+        app: iot-app2
+    spec:
+      volumes:
+        - name: shared-data
+          emptyDir: {}
+        - name: config-volume
+          configMap:
+            name: iot-configmap
+      containers:
+        - name: nginx
+          image: "nginx:stable-alpine3.24-perl"
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: shared-data
+              mountPath: /usr/share/nginx/html
+      initContainers:
+        - name: alpine
+          image: "alpine:3.23.5"
+          restartPolicy: Always
+          volumeMounts:
+            - name: shared-data
+              mountPath: /pod-data
+            - name: config-volume
+              mountPath: /etc/config
+          command:
+            - /bin/sh 
+            - -c
+            - |
+              while true; do
+                echo $(cat /etc/config/app2) > /pod-data/index.html;
+                sleep 10;
+              done;
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iot-app3-deployment
+  labels:
+    app: iot-app3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: iot-app3
+  template: #This is field of pod
+    metadata:
+      labels:
+        app: iot-app3
+    spec:
+      volumes:
+        - name: shared-data
+          emptyDir: {}
+        - name: config-volume
+          configMap:
+            name: iot-configmap
+      containers:
+        - name: nginx
+          image: "nginx:stable-alpine3.24-perl"
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: shared-data
+              mountPath: /usr/share/nginx/html
+      initContainers:
+        - name: alpine
+          image: "alpine:3.23.5"
+          restartPolicy: Always
+          volumeMounts:
+            - name: shared-data
+              mountPath: /pod-data
+            - name: config-volume
+              mountPath: /etc/config
+          command:
+            - /bin/sh 
+            - -c
+            - |
+              while true; do
+                echo $(cat /etc/config/app3) > /pod-data/index.html;
+                sleep 10;
+              done;
