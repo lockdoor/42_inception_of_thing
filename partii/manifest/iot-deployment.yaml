@@ -42,7 +42,7 @@ spec:
             - -c
             - |
               while true; do
-                echo $(cat /etc/config/app1) > /pod-data/index.html;
+                echo "$(cat /etc/config/app1), From $HOSTNAME" > /pod-data/index.html;
                 sleep 10;
               done;
             # use echo for \n
@@ -97,7 +97,7 @@ spec:
             - -c
             - |
               while true; do
-                echo $(cat /etc/config/app2) > /pod-data/index.html;
+                echo "$(cat /etc/config/app2), From $HOSTNAME" > /pod-data/index.html;
                 sleep 10;
               done;
 
@@ -146,6 +146,6 @@ spec:
             - -c
             - |
               while true; do
-                echo $(cat /etc/config/app3) > /pod-data/index.html;
+                echo "$(cat /etc/config/app3), From $HOSTNAME" > /pod-data/index.html;
                 sleep 10;
               done;
