@@ -1,0 +1,12 @@
+# kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - mongo-namespace.yaml
+  - mongo-configmap.yaml
+  - mongo-secret.yaml
+  - mongo-deploy.yaml
+  - mongo-express-deploy.yaml
+
+# usage: kubectl apply -k
