@@ -1,7 +1,10 @@
-VAGRANT=$(shell if command -v vagrant 2>/dev/null; then echo 'vagrant'; else echo 'vagrant.exe'; fi)
+VAGRANT=$(shell if command -v vagrant 2>/dev/null; then echo ''; else echo 'vagrant.exe'; fi)
 
 all:
 	$(VAGRANT) -v
+
+status:
+	$(VAGRANT) status
 
 up:
 	$(VAGRANT) up
