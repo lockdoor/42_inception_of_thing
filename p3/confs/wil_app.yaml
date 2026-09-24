@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: wil-app-deployment
-  namespace: mongodb
+  # namespace: dev
   labels:
     app: wil-app
 spec:
@@ -27,7 +27,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: wil-app-service
-  namespace: dev
+  # namespace: dev
 spec:
   type: LoadBalancer
   selector:
