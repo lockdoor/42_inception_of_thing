@@ -4,23 +4,22 @@ Vagrant.configure("2") do |config|
     config.vm.define "pnamnilS" do |pnamnilS|
         pnamnilS.vm.hostname = "pnamnilS"
         pnamnilS.vm.network "private_network", ip: "192.168.56.110"
-        pnamnilS.vm.provider "virtualbox" do |vb|
-            vb.cpus = "2"
-            vb.memory = "2048"
+        pnamnilS.vm.provider "libvirt" do |lv|
+            lv.driver = "kvm"
+            lv.memory = 2048
+            lv.cpus = 2
         end
-        pnamnilS.vm.synced_folder "./confs", "/home/vagrant/confs", create:true
-
         pnamnilS.vm.provision "shell", path: "./scripts/server.sh"
     end
 
     config.vm.define "pnamnilSW" do |pnamnilSW|
         pnamnilSW.vm.hostname = "pnamnilSW"
         pnamnilSW.vm.network "private_network", ip: "192.168.56.111"
-        pnamnilSW.vm.provider "virtualbox" do |vb|
-            vb.cpus = "1"
-            vb.memory = "1024"
+        pnamnilSW.vm.provider "libvirt" do |lv|
+            lv.driver = "kvm"
+            lv.memory = 1024
+            lv.cpus = 1
         end
-        pnamnilSW.vm.synced_folder "./confs", "/home/vagrant/confs", create:true
         pnamnilSW.vm.provision "shell", path: "./scripts/worker.sh"
     end
 end

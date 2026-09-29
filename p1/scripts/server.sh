@@ -11,4 +11,18 @@ sudo chown -R vagrant:vagrant /home/vagrant/.kube
 echo 'export KUBECONFIG=/home/vagrant/.kube/config' >> /home/vagrant/.bashrc
 
 # copy node token
-cat /var/lib/rancher/k3s/server/node-token >> /home/vagrant/confs/token
+# cat /var/lib/rancher/k3s/server/node-token >> /home/vagrant/confs/token
+
+# รอให้ k3s สร้าง node-token ให้เสร็จ
+while [ ! -f /var/lib/rancher/k3s/server/node-token ]; do
+    sleep 2
+done
+
+# ก๊อปปี้ token ออกมาให้ user vagrant อ่านได้
+cp /var/lib/rancher/k3s/server/node-token /home/vagrant/node-token
+chmod 644 /home/vagrant/node-token
+
+# อนุญาตให้เข้า ssh ด้วย password หรือใช้ ssh-key
+echo "vagrant:vagrant" | chpasswd
+sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
+systemctl restart ssh
