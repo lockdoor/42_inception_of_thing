@@ -38,13 +38,15 @@ argo:
 	@ echo "Create Argocd wil-app"
 	@ argocd app create wil-app \
 		--repo https://github.com/lockdoor/42_inception_of_thing.git \
-		--revision main
+		--revision main \
 		--path p3/confs \
 		--dest-server https://kubernetes.default.svc \
 		--dest-namespace dev
+#	for default config app still out of sync we can sync and deploy with
+#	$ argocd app sync wil-app
 
-	@ echo "Wait for App become synchornized"
-	@ kubectl wait --for=condition=synced app/wil-app -n dev --timeout=300s > /dev/null
+# 	@ echo "Wait for App become synchornized"
+# 	@ kubectl wait --for=condition=synced app/wil-app -n dev --timeout=300s > /dev/null
 
 #	use patch service loadbalancer instead port-forward
 #	@ echo "Forward port $(ARGO_PORT) to Argo CD server"
