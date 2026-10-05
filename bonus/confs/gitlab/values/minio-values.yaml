@@ -1,0 +1,17 @@
+# secrets:
+   # Replace the following two values with your own values (mandatory).
+   # accessKey: "access-key"
+   # secretKey: "secret-key"
+   # for this project move secrets to ../secrets/minio-secrets.yaml
+objectStore:
+   name: primary-object-store # name of the AIStor Server
+   pools:
+   - name: pool-0
+     servers: 1 # Number of servers/pods to deploy
+     volumesPerServer: 1 # Number of Persistent Volumes per Server/Pod
+     size: 2Gi # Size of each PV
+#    storageClassName: directpv-min-io # Storage Class assigned to each PV
+   services:
+      minio:
+         serviceType: NodePort
+         nodePort: 31000 # Select an available NodePort in the supported range of 30000-32767
