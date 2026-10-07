@@ -1,4 +1,16 @@
 auth:
   database: "gitlabhq_production"
   username: "gitlab"
-  existingSecret: "postgresql-secret"
+  existingSecret: "my-secret"
+
+primary:
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "2Gi"
+
+  extendedConfiguration: |
+    max_locks_per_transaction = 256
+    max_connections = 200

@@ -22,22 +22,22 @@ spec:
         - containerPort: 8081
           name: http
         # enable all env for bypass connect database
-        env:
-        - name: DB_USER
-          value: "gitlab"
-        - name: DB_PASS
-          valueFrom:
-            secretKeyRef:
-              name: postgresql-secret
-              key: password
-        - name: DB_HOST
-          value: "postgresql.gitlab.svc.cluster.local"
-        - name: DB_PORT
-          value: "5432"
-        - name: DB_NAME
-          value: "gitlabhq_production"
-        - name: PGWEB_DATABASE_URL
-          value: "postgres://$(DB_USER):$(DB_PASS)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable"
+        # env:
+        # - name: DB_USER
+        #   value: "gitlab"
+        # - name: DB_PASS
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: postgresql-secret
+        #       key: password
+        # - name: DB_HOST
+        #   value: "postgresql.gitlab.svc.cluster.local"
+        # - name: DB_PORT
+        #   value: "5432"
+        # - name: DB_NAME
+        #   value: "gitlabhq_production"
+        # - name: PGWEB_DATABASE_URL
+        #   value: "postgres://$(DB_USER):$(DB_PASS)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable"
 
 ---
 
@@ -54,3 +54,25 @@ spec:
   - port: 80
     targetPort: 8081
     name: http
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pgweb-ingress
+  namespace: gitlab
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  rules:
+    - host: gitlab-pgweb.cadet.in.th
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: pgweb-service
+                port:
+                  number: 80

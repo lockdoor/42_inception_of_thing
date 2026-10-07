@@ -1,8 +1,8 @@
-# secrets:
+secrets:
    # Replace the following two values with your own values (mandatory).
-   # accessKey: "access-key"
-   # secretKey: "secret-key"
-   # for this project move secrets to ../secrets/minio-secrets.yaml
+   accessKey: "access-key"
+   secretKey: "secret-key"
+   # We will overide secrets with cli
 objectStore:
    name: primary-object-store # name of the AIStor Server
    pools:
