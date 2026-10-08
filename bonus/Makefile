@@ -8,12 +8,19 @@
 -include secrets.env
 export
 
+CLUSTER_NAME = demo
 
+GITLAB_CHART_VERSION = 10.4.1
+MINIO_OPERATOR_CHART_VERSION = 6.0.0
+MINIO_OBJECTSTORE_CHART_VERSION = 1.1.0
+BITNAMI_PG_CHART_VERSION = 18.12.4
+REDIS_CHART_VERSION = 28.3.1
 
-# Directory
+DATA_DIR = $(PWD)/.data
+
 GITLAB_CONFIGS_DIR = $(PWD)/confs/gitlab
-MINIO_LICENSE_FILE = $(GITLAB_CONFIGS_DIR)/secrets/minio-license-key
-
+REGISTRY_COMPOSE = $(PWD)/confs/docker-compose.registry-cache.yaml
+K3D_CONFIG = $(PWD)/confs/k3d-config.yaml
 
 .PHONY: all cluster gitlab-secrets gitlab-postgresql gitlab-pgweb \
 gitlab-redis gitlab-minio gitlab-cert gitlab-ingress clean
@@ -22,11 +29,14 @@ gitlab-redis gitlab-minio gitlab-cert gitlab-ingress clean
 all:
 	$(MAKE) check-secrets
 	$(MAKE) cluster
+	$(MAKE) gitlab-namespace
 	$(MAKE) gitlab-cert
 	$(MAKE) gitlab-postgresql
 	$(MAKE) gitlab-pgweb
 	$(MAKE) gitlab-redis
 	$(MAKE) gitlab-minio
+	$(MAKE) gitlab-minio-bucket
+	$(MAKE) gitlab
 
 
 # ตรวจสอบว่ามีตัวแปรครบก่อนเริ่มงาน
@@ -52,12 +62,29 @@ check-secrets:
 		exit 1; \
 	fi
 
-cluster:
-	@ echo "Create K3d Cluster"
-	@ k3d cluster create demo --servers 1 --agents 1 \
-		--port "443:443@loadbalancer" \
-		--port "80:80@loadbalancer" \
-		--wait > /dev/null
+
+prepare-storage:
+	@echo "Creating persistent storage directory at $(DATA_DIR)..."
+	@mkdir -p $(DATA_DIR)
+	@chmod 777 $(DATA_DIR)
+
+
+cache-up:
+	@echo "Ensuring image pull-through caches are running..."
+	@docker compose -f $(REGISTRY_COMPOSE) up -d
+
+
+cluster: cache-up prepare-storage
+	@if ! k3d cluster list | grep -q "^$(CLUSTER_NAME) "; then \
+		echo "Creating k3d cluster $(CLUSTER_NAME)..."; \
+		k3d cluster create $(CLUSTER_NAME) --config $(K3D_CONFIG); \
+	else \
+		echo "Cluster $(CLUSTER_NAME) already exists."; \
+	fi
+# 		-v "$(DATA_DIR):/var/lib/rancher/k3s/storage@server:*"; \
+
+
+gitlab-namespace:
 	kubectl create namespace gitlab --dry-run=client -o yaml | kubectl apply -f -
 	kubectl wait --for=jsonpath='{.status.phase}'=Active namespace/gitlab --timeout=30s
 
@@ -82,7 +109,8 @@ gitlab-postgresql:
 	--set auth.username="gitlab" \
 	--set auth.existingSecret=postgresql-secret \
 	-f $(GITLAB_CONFIGS_DIR)/values/postgresql-values.yaml \
-	--wait --timeout 5m
+	--wait --timeout 5m \
+	--version $(BITNAMI_PG_CHART_VERSION) \
 
 
 gitlab-pgweb:
@@ -109,7 +137,8 @@ gitlab-redis:
 		--namespace gitlab --create-namespace \
 		--set auth.password=$(REDIS_PASSWORD) \
 		--set replica.replicaCount=1 \
-		--wait --timeout 5m
+		--wait --timeout 5m \
+		--version $(REDIS_CHART_VERSION) \
 
 
 gitlab-minio:
@@ -119,23 +148,32 @@ gitlab-minio:
 	@helm upgrade --install aistor minio/aistor-operator \
 		-n aistor-operator --create-namespace \
 		--set license=$(MINIO_LICENSE) \
-		--wait --timeout 5m
+		--wait --timeout 5m \
+		--version $(MINIO_OPERATOR_CHART_VERSION) \
+	
 	# we can create objectstore for each namespace
 	@helm upgrade --install objectstore minio/aistor-objectstore \
 		-n gitlab --create-namespace \
 		-f $(GITLAB_CONFIGS_DIR)/values/minio-values.yaml \
 		--set secrets.accessKey=$(MINIO_ROOT_USER) \
 		--set secrets.secretKey=$(MINIO_ROOT_PASSWORD) \
-		--wait --timeout 5m
+		--wait --timeout 5m \
+		--version $(MINIO_OBJECTSTORE_CHART_VERSION) \
+	
 	# apply ingress
 	@kubectl apply -f $(GITLAB_CONFIGS_DIR)/minio-ingress.yaml
 
-bucket:
+gitlab-minio-bucket:
+	@echo "Waiting for MinIO pod to be created by the operator..."
+	@until kubectl get pod -n gitlab -l aistor.min.io/objectStore=primary-object-store 2>/dev/null | grep -q 'primary-object-store'; do \
+		echo "Waiting for MinIO pod to appear..."; \
+		sleep 3; \
+	done
 	@echo "Waiting for MinIO pod to be ready..."
 	@kubectl wait --namespace gitlab \
 		--for=condition=ready pod \
 		-l aistor.min.io/objectStore=primary-object-store \
-		--timeout=120s
+		--timeout=180s
 	@echo "Creating GitLab buckets via MinIO pod exec..."
 	@POD_NAME=$$(kubectl get pod -n gitlab -l aistor.min.io/objectStore=primary-object-store -o jsonpath='{.items[0].metadata.name}'); \
 	kubectl exec -n gitlab $$POD_NAME -- \
@@ -150,42 +188,31 @@ bucket:
 			local/registry
 	@echo "All buckets created successfully!"
 
-gitlab-cert:
-	openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-		-keyout gitlab-tls.key \
-		-out gitlab-tls.crt \
-		-subj "/CN=cadet.in.th" \
-		-addext "subjectAltName = DNS:minio-console.cadet.in.th, DNS:cadet.in.th"
-	kubectl create secret tls gitlab-tls \
-		--cert=gitlab-tls.crt \
-		--key=gitlab-tls.key \
-		--namespace=gitlab \
-		--dry-run=client -o yaml | kubectl apply -f -
-	kubectl wait --for=create secret/gitlab-tls -n gitlab --timeout=30s
-	rm -f gitlab-tls.crt gitlab-tls.key
-
-
-gitlab-secret:
-	@printf "provider: AWS\nregion: us-east-1\naws_access_key_id: %s\naws_secret_access_key: %s\nendpoint: https://primary-object-store-hl.gitlab.svc.cluster.local:9000\npath_style: true\n" \
-		"$(MINIO_ROOT_USER)" "$(MINIO_ROOT_PASSWORD)" | \
-		kubectl create secret generic gitlab-s3-connection \
-			--namespace gitlab \
-			--from-file=connection=/dev/stdin \
-			--dry-run=client -o yaml | kubectl apply -f -
-	@echo "Secret gitlab-s3-connection created successfully!"
 
 gitlab:
+	@printf "provider: AWS\nregion: us-east-1\naws_access_key_id: %s\naws_secret_access_key: %s\nendpoint: https://primary-object-store-hl.gitlab.svc.cluster.local:9000\npath_style: true\n" \
+	"$(MINIO_ROOT_USER)" "$(MINIO_ROOT_PASSWORD)" | \
+	kubectl create secret generic gitlab-s3-connection \
+		--namespace gitlab \
+		--from-file=connection=/dev/stdin \
+		--dry-run=client -o yaml | kubectl apply -f -
+	@echo "Secret gitlab-s3-connection created successfully!"
+
 	helm repo add gitlab https://charts.gitlab.io/
 	# helm repo update
 	helm upgrade --install gitlab gitlab/gitlab \
-	--timeout 600s --wait \
+	-n gitlab --create-namespace \
+	--timeout 1200s --wait \
 	-f $(GITLAB_CONFIGS_DIR)/values/gitlab-values.yaml \
 	--set global.psql.password.secret=postgresql-secret \
 	--set global.psql.password.key=password \
 	--set global.redis.auth.secret=redis-secret \
 	--set global.redis.auth.key=password \
 	--set global.appConfig.object_store.connection.secret=gitlab-s3-connection \
-	--set global.appConfig.object_store.connection.key=connection
+	--set global.appConfig.object_store.connection.key=connection \
+	--version $(GITLAB_CHART_VERSION) \
+
+	kubectl apply -f $(GITLAB_CONFIGS_DIR)/gitlab-ingress.yaml
 
 
 clean:

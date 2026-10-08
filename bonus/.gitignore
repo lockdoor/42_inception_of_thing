@@ -2,3 +2,4 @@ secrets.yaml
 minio-license-key
 minio-secrets.yaml
 secrets.env
+.data

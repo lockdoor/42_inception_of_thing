@@ -10,6 +10,10 @@ global:
   gatewayApi:
     enabled: false
     installEnvoy: false
+    configureCertmanager: false
+
+  kas:
+    enabled: false
 
   # --------------------------------------------------
   # 1. เชื่อมต่อ External PostgreSQL
@@ -19,9 +23,6 @@ global:
     port: 5432
     database: gitlabhq_production
     username: gitlab
-    # password:
-    #   secret: cadet-secret
-    #   key: password
 
   # --------------------------------------------------
   # 2. เชื่อมต่อ External Redis
@@ -29,9 +30,6 @@ global:
   redis:
     host: gitlab-redis-master.gitlab.svc.cluster.local
     port: 6379
-    # password:
-    #   secret: cadet-secret
-    #   key: secret
 
 
   # --------------------------------------------------
@@ -40,44 +38,10 @@ global:
   appConfig:
     object_store:
       enabled: true
-      # connection:
-      #   secret: gitlab-s3-connection
-      #   key: connection
+
+# docker image registry
 registry:
   enabled: false
-    # lfs:
-    #   connection:
-    #     secret: gitlab-s3-connection
-    #     key: connection
-    # artifacts:
-    #   connection:
-    #     secret: gitlab-s3-connection
-    #     key: connection
-    # uploads:
-    #   connection:
-    #     secret: gitlab-s3-connection
-    #     key: connection
-    # packages:
-    #   connection:
-    #     secret: gitlab-s3-connection
-    #     key: connection
-
-  # ปิด Ingress controller ของ GitLab เอง (เราใช้ Traefik อยู่แล้ว)
-  # ingress:
-  #   configureCertmanager: false
-  #   enabled: false
-
-# --------------------------------------------------
-# ปิด Services ภายในคลัสเตอร์ที่เรามีตัวแยกอยู่แล้ว
-# --------------------------------------------------
-# postgresql:
-#   install: false
-
-# redis:
-#   install: false
-
-# minio:
-#   install: false
 
 # --------------------------------------------------
 # ปิด Services ที่ยังไม่จำเป็นสำหรับ Push / Minimal Code Host

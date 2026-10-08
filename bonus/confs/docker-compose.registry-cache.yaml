@@ -1,0 +1,33 @@
+services:
+  cache-dockerhub:
+    image: registry:2
+    container_name: cache-dockerhub
+    restart: always
+    ports:
+      - "5001:5000"
+    environment:
+      REGISTRY_PROXY_REMOTEURL: https://registry-1.docker.io
+    volumes:
+      - /var/lib/k3d-cache/dockerhub:/var/lib/registry
+
+  cache-gitlab:
+    image: registry:2
+    container_name: cache-gitlab
+    restart: always
+    ports:
+      - "5002:5000"
+    environment:
+      REGISTRY_PROXY_REMOTEURL: https://registry.gitlab.com
+    volumes:
+      - /var/lib/k3d-cache/gitlab:/var/lib/registry
+
+  cache-quay:
+    image: registry:2
+    container_name: cache-quay
+    restart: always
+    ports:
+      - "5003:5000"
+    environment:
+      REGISTRY_PROXY_REMOTEURL: https://quay.io
+    volumes:
+      - /var/lib/k3d-cache/quay:/var/lib/registry

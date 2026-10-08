@@ -1,0 +1,41 @@
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: demo
+servers: 1
+agents: 0
+image: rancher/k3s:v1.31.1-k3s1 # ปรับเวอร์ชันตามที่ต้องการใช้งาน
+
+ports:
+  - port: 80:80
+    nodeFilters:
+      - loadbalancer
+  - port: 443:443
+    nodeFilters:
+      - loadbalancer
+
+registries:
+  config: |
+    mirrors:
+      "docker.io":
+        endpoint:
+          - "http://host.k3d.internal:5001"
+      "registry-1.docker.io":
+        endpoint:
+          - "http://host.k3d.internal:5001"
+      "registry.gitlab.com":
+        endpoint:
+          - "http://host.k3d.internal:5002"
+      "quay.io":
+        endpoint:
+          - "http://host.k3d.internal:5003"
+
+options:
+  k3d:
+    wait: true
+    timeout: "120s"
+  # k3s:
+  #   extraArgs:
+  #     - arg: --disable=traefik
+  #       nodeFilters:
+  #         - server:* # ใส่บรรทัดนี้หากต้องการคุม Ingress เอง หรือลบออกถ้าใช้ Traefik ในตัว
