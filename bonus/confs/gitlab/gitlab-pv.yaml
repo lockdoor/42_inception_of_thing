@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: gitlab-pv
+spec:
+  capacity:
+    storage: 55Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: gitlab-pv
+  hostPath:
+    path: /var/lib/rancher/k3s/storage/gitlab-data

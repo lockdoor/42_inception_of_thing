@@ -1,7 +1,13 @@
+global:
+  defaultStorageClass: "postgresql-pv"
+
 auth:
   database: "gitlabhq_production"
   username: "gitlab"
   existingSecret: "my-secret"
+
+volumePermissions:
+  enabled: true
 
 primary:
   resources:

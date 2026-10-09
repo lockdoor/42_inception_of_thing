@@ -23,14 +23,14 @@ REGISTRY_COMPOSE = $(PWD)/confs/docker-compose.registry-cache.yaml
 K3D_CONFIG = $(PWD)/confs/k3d-config.yaml
 
 .PHONY: all cluster gitlab-secrets gitlab-postgresql gitlab-pgweb \
-gitlab-redis gitlab-minio gitlab-cert gitlab-ingress clean
+gitlab-redis gitlab-minio gitlab-ingress clean gitlab
 
 
 all:
 	$(MAKE) check-secrets
 	$(MAKE) cluster
 	$(MAKE) gitlab-namespace
-	$(MAKE) gitlab-cert
+	$(MAKE) gitlab-postgresql-pv
 	$(MAKE) gitlab-postgresql
 	$(MAKE) gitlab-pgweb
 	$(MAKE) gitlab-redis
@@ -65,8 +65,10 @@ check-secrets:
 
 prepare-storage:
 	@echo "Creating persistent storage directory at $(DATA_DIR)..."
-	@mkdir -p $(DATA_DIR)
-	@chmod 777 $(DATA_DIR)
+	@mkdir -p $(DATA_DIR)/postgresql-data
+	@mkdir -p $(DATA_DIR)/minio-data
+	@mkdir -p $(DATA_DIR)/gitlab-data
+	-chmod -Rf 777 $(DATA_DIR) 2>/dev/null
 
 
 cache-up:
@@ -77,19 +79,21 @@ cache-up:
 cluster: cache-up prepare-storage
 	@if ! k3d cluster list | grep -q "^$(CLUSTER_NAME) "; then \
 		echo "Creating k3d cluster $(CLUSTER_NAME)..."; \
-		k3d cluster create $(CLUSTER_NAME) --config $(K3D_CONFIG); \
+		k3d cluster create $(CLUSTER_NAME) --config $(K3D_CONFIG) \
+		-v "$(DATA_DIR):/var/lib/rancher/k3s/storage@server:*"; \
 	else \
 		echo "Cluster $(CLUSTER_NAME) already exists."; \
 	fi
-# 		-v "$(DATA_DIR):/var/lib/rancher/k3s/storage@server:*"; \
 
 
 gitlab-namespace:
 	kubectl create namespace gitlab --dry-run=client -o yaml | kubectl apply -f -
 	kubectl wait --for=jsonpath='{.status.phase}'=Active namespace/gitlab --timeout=30s
 
+gitlab-postgresql-pv:
+	kubectl apply -f $(GITLAB_CONFIGS_DIR)/postgresql-pv.yaml
 
-gitlab-postgresql:
+gitlab-postgresql: gitlab-postgresql-pv
 	# This App required secret key, apply secret in "./confs/secrets" before start app
 	# helm repository
 	helm repo add bitnami https://charts.bitnami.com/bitnami
@@ -108,7 +112,7 @@ gitlab-postgresql:
 	--set auth.database="gitlabhq_production" \
 	--set auth.username="gitlab" \
 	--set auth.existingSecret=postgresql-secret \
-	-f $(GITLAB_CONFIGS_DIR)/values/postgresql-values.yaml \
+	-f $(GITLAB_CONFIGS_DIR)/postgresql-values.yaml \
 	--wait --timeout 5m \
 	--version $(BITNAMI_PG_CHART_VERSION) \
 
@@ -138,10 +142,15 @@ gitlab-redis:
 		--set auth.password=$(REDIS_PASSWORD) \
 		--set replica.replicaCount=1 \
 		--wait --timeout 5m \
+		--set master.persistence.enabled=false \
+		--set replica.persistence.enabled=false \
 		--version $(REDIS_CHART_VERSION) \
 
 
-gitlab-minio:
+gitlab-minio-pv:
+	kubectl apply -f $(GITLAB_CONFIGS_DIR)/minio-pv.yaml
+
+gitlab-minio: gitlab-minio-pv
 	# https://docs.min.io/aistor/installation/kubernetes/install/deploy-aistor-on-kubernetes/#configure-and-deploy-the-minioaistor-objectstore-chart
 	helm repo add minio https://helm.min.io/
 	# because 1 operator for control all cluster we should create operator seperate namespace
@@ -154,7 +163,7 @@ gitlab-minio:
 	# we can create objectstore for each namespace
 	@helm upgrade --install objectstore minio/aistor-objectstore \
 		-n gitlab --create-namespace \
-		-f $(GITLAB_CONFIGS_DIR)/values/minio-values.yaml \
+		-f $(GITLAB_CONFIGS_DIR)/minio-values.yaml \
 		--set secrets.accessKey=$(MINIO_ROOT_USER) \
 		--set secrets.secretKey=$(MINIO_ROOT_PASSWORD) \
 		--wait --timeout 5m \
@@ -189,7 +198,10 @@ gitlab-minio-bucket:
 	@echo "All buckets created successfully!"
 
 
-gitlab:
+gitlab-pv:
+	kubectl apply -f $(GITLAB_CONFIGS_DIR)/gitlab-pv.yaml
+
+gitlab: gitlab-pv
 	@printf "provider: AWS\nregion: us-east-1\naws_access_key_id: %s\naws_secret_access_key: %s\nendpoint: https://primary-object-store-hl.gitlab.svc.cluster.local:9000\npath_style: true\n" \
 	"$(MINIO_ROOT_USER)" "$(MINIO_ROOT_PASSWORD)" | \
 	kubectl create secret generic gitlab-s3-connection \
@@ -203,7 +215,7 @@ gitlab:
 	helm upgrade --install gitlab gitlab/gitlab \
 	-n gitlab --create-namespace \
 	--timeout 1200s --wait \
-	-f $(GITLAB_CONFIGS_DIR)/values/gitlab-values.yaml \
+	-f $(GITLAB_CONFIGS_DIR)/gitlab-values.yaml \
 	--set global.psql.password.secret=postgresql-secret \
 	--set global.psql.password.key=password \
 	--set global.redis.auth.secret=redis-secret \
@@ -217,6 +229,11 @@ gitlab:
 
 clean:
 	k3d cluster delete demo
+
+clean-data:
+	@echo "Removing persistent data..."
+	@docker run --rm -v $(CURDIR)/.data:/data alpine sh -c "rm -rf /data/* /data/.* 2>/dev/null || true"
+	@rm -rf .data
 
 # get secret
 # kubectl get secret [secret-name] -n [namespace] -o jsonpath="{.data['config\.env']}" | base64 -d

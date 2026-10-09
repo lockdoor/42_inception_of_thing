@@ -63,8 +63,9 @@ certmanager-issuer:
 gatewayApi:
   enable: false
 
-# certmanager:
-#   install: false          # ไม่ใช้ cert-manager
-
-# nginx-ingress:
-#   enabled: false          # ไม่ลง Nginx ซ้อนกับ Traefik
+gitlab:
+  gitaly:
+    persistence:
+      enabled: true
+      storageClass: "gitlab-pv"
+      size: 50Gi
