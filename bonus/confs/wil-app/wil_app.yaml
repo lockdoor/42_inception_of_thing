@@ -43,7 +43,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: wil-app-ingress
-  namespace: gitlab
+  namespace: dev
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web
 spec:
