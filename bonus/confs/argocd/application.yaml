@@ -9,7 +9,7 @@ spec:
   project: default
   source:
     repoURL: https://gitlab.cadet.in.th/pitsanu/iot.git
-    targetRevision: main
+    targetRevision: libvirt
     path: bonus/confs/wil-app
   destination:
     server: https://kubernetes.default.svc

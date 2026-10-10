@@ -3,3 +3,4 @@ minio-license-key
 minio-secrets.yaml
 secrets.env
 .data
+.gitlab-personal-access-token
