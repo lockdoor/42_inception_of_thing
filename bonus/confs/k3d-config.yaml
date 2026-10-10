@@ -29,6 +29,12 @@ registries:
       "quay.io":
         endpoint:
           - "http://host.k3d.internal:5003"
+      "ghcr.io":
+        endpoint:
+          - "http://host.k3d.internal:5004"
+      "public.ecr.aws":
+        endpoint:
+          - "http://host.k3d.internal:5005"
 
 options:
   k3d:

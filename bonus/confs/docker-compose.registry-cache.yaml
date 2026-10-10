@@ -31,3 +31,25 @@ services:
       REGISTRY_PROXY_REMOTEURL: https://quay.io
     volumes:
       - /var/lib/k3d-cache/quay:/var/lib/registry
+
+  cache-ghcr:
+      image: registry:2
+      container_name: cache-ghcr
+      restart: always
+      ports:
+        - "5004:5000"
+      environment:
+        REGISTRY_PROXY_REMOTEURL: https://ghcr.io
+      volumes:
+        - /var/lib/k3d-cache/ghcr:/var/lib/registry
+
+  cache-ecr:
+    image: registry:2
+    container_name: cache-ecr
+    restart: always
+    ports:
+      - "5005:5000"
+    environment:
+      REGISTRY_PROXY_REMOTEURL: https://public.ecr.aws
+    volumes:
+      - /var/lib/k3d-cache/ecr:/var/lib/registry

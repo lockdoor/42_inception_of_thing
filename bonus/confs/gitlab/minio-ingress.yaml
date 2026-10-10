@@ -24,5 +24,3 @@ spec:
           port: 9443
           scheme: https
           serversTransport: minio-insecure-transport
-  tls:
-    secretName: gitlab-tls

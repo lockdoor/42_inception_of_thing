@@ -19,6 +19,7 @@ REDIS_CHART_VERSION = 28.3.1
 DATA_DIR = $(PWD)/.data
 
 GITLAB_CONFIGS_DIR = $(PWD)/confs/gitlab
+ARGOCD_CONFIGS_DIR = $(PWD)/confs/argocd
 REGISTRY_COMPOSE = $(PWD)/confs/docker-compose.registry-cache.yaml
 K3D_CONFIG = $(PWD)/confs/k3d-config.yaml
 
@@ -37,6 +38,7 @@ all:
 	$(MAKE) gitlab-minio
 	$(MAKE) gitlab-minio-bucket
 	$(MAKE) gitlab
+	$(MAKE) argocd
 
 
 # ตรวจสอบว่ามีตัวแปรครบก่อนเริ่มงาน
@@ -210,6 +212,12 @@ gitlab: gitlab-pv
 		--dry-run=client -o yaml | kubectl apply -f -
 	@echo "Secret gitlab-s3-connection created successfully!"
 
+	@echo "Create root password for gitlab"
+	kubectl create secret generic gitlab-gitlab-initial-root-password \
+	-n gitlab \
+	--from-literal=password=$(GITLAB_ROOT_PASSWORD) \
+	--dry-run=client -o yaml | kubectl apply -f -
+
 	helm repo add gitlab https://charts.gitlab.io/
 	# helm repo update
 	helm upgrade --install gitlab gitlab/gitlab \
@@ -235,5 +243,21 @@ clean-data:
 	@docker run --rm -v $(CURDIR)/.data:/data alpine sh -c "rm -rf /data/* /data/.* 2>/dev/null || true"
 	@rm -rf .data
 
-# get secret
-# kubectl get secret [secret-name] -n [namespace] -o jsonpath="{.data['config\.env']}" | base64 -d
+
+argocd:
+	@ echo "Create namespace argocd"
+	kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+	kubectl wait --for=jsonpath='{.status.phase}'=Active namespace/argocd --timeout=30s
+
+	@ echo "Install Argo CD"
+	@ kubectl apply -n argocd --server-side --force-conflicts \
+	-f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml > /dev/null
+
+	@ echo "Waiting for Argo CD Server to be ready..."
+	@ kubectl wait --for=condition=available deployment/argocd-server -n argocd --timeout=300s > /dev/null
+
+	@ echo "Apply ingress"
+	@ kubectl apply -f $(ARGOCD_CONFIGS_DIR)/argocd-ingress.yaml
+
+	@ echo "Apply Application"
+	@ kubectl apply -f $(ARGOCD_CONFIGS_DIR)/application.yaml

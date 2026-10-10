@@ -34,3 +34,34 @@ maybe helm install chart gitlab failed cause reach time limit cause download a l
 kubecel delete job [all job of git lab]
 ```
 then run again
+
+we can view all image use in cluster
+```
+kubectl get pods --all-namespaces -o jsonpath="{.items[*].spec['initContainers', 'containers'][*].image}" |\
+tr -s '[[:space:]]' '\n' |\
+sort |\
+uniq -c
+```
+
+## Gitlab root password
+First time can get Gitlab root password by secret
+```
+k get secret gitlab-gitlab-initial-root-password  -n gitlab -o jsonpath="{.data['password']}" | base64 -d
+YN06RO75QbNmvfsuU10PmpDfJnyrHtunWc7cngAvxmO4zyuHKEx4bBkveofrLiSj
+```
+after that password will seed into database 
+if you delete cluster and create again 
+gitlab will check if database exist it omit seed new
+but secret password still generate
+if you forget root password can reset by toolboxs
+```
+TOOLBOX_POD=$(kubectl get pod -n gitlab -l app=toolbox -o jsonpath='{.items[0].metadata.name}')
+kubectl exec -it -n gitlab $TOOLBOX_POD -- gitlab-rails runner "user = User.find_by_username('root'); user.password = 'MySecretGitLabPass123!'; user.password_confirmation = 'MySecretGitLabPass123!'; user.save!"
+```
+for init password when gitlab install create secret before install gitlab
+```
+kubectl create secret generic gitlab-gitlab-initial-root-password \
+  -n gitlab \
+  --from-literal=password='MySecretGitLabPass123!' \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
