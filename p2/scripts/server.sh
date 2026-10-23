@@ -1,8 +1,11 @@
 #! /bin/bash
 
+SERVER_IP="192.168.56.110"
+INTERFACE=$(ip -o -4 addr show to $SERVER_IP | awk '{print $2}')
+
 # Install K3s Server with bind eth1 and ip 192.168.56.110
 curl -sfL https://get.k3s.io | \
-    INSTALL_K3S_EXEC="server --node-ip=192.168.56.110 --flannel-iface=eth1" sh -s -
+INSTALL_K3S_EXEC="server --node-ip=192.168.56.110 --flannel-iface=${INTERFACE}" sh -s -
 
 # set user vagrant can run kubectl
 mkdir -p /home/vagrant/.kube
